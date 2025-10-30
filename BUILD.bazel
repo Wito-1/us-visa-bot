@@ -1,0 +1,47 @@
+# Load in the @pip generated requirements function.
+# This is generated from the pip.parse() in MODULE.bazel.
+load("@pip//:requirements.bzl", "requirement")
+load("@rules_python//python:defs.bzl", "py_library", "py_binary", "py_test")
+load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+
+# Helper macro that can be used to update the `requirements.txt`, to execute, run:
+# ```
+# bazel run //:requirements.update`
+# ```
+# Then commit the resulting `requirements.txt` file.
+#
+# Additionally, it generates requirements_test target to check if lock file is out of sync
+# with the `in` file that gets checked in CI.
+
+compile_pip_requirements(
+    name = "requirements",
+    timeout = "moderate",
+    requirements_in = "requirements.in",
+    requirements_txt = "requirements.txt",
+    tags = ["exclusive"],
+)
+
+py_binary(
+    name = "selenium_scraper",
+    srcs = [
+        "selenium_scraper.py",
+    ],
+    data = [".env"],
+    deps = [
+        requirement("selenium"),
+        requirement("python-dotenv"),
+        requirement("requests"),
+    ],
+)
+
+#py_test(
+#    name = "hello_world_test",
+#    size = "small",
+#    srcs = [
+#        "hello_world_test.py",
+#    ],
+#    visibility = ["//visibility:public"],
+#    deps = [
+#        ":lib",
+#    ],
+#)

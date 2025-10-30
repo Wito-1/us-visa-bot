@@ -1,5 +1,6 @@
 # from pyvirtualdisplay import Display
 import os
+import re
 import sys
 import time
 
@@ -8,6 +9,8 @@ from selenium import webdriver
 from selenium.common.exceptions import ElementNotInteractableException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select, WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 from telegram import send_message, send_photo
 
@@ -31,8 +34,9 @@ def log_in(driver):
     except:
         pass
     # Filling the user and password
+
     user_box = driver.find_element(By.NAME, 'user[email]')
-    user_box.send_keys(os.getenv('USERNAME'))
+    user_box.send_keys(os.getenv('LOGIN'))
     password_box = driver.find_element(By.NAME, 'user[password]')
     password_box.send_keys(os.getenv('PASSWORD'))
     # Clicking the checkbox
@@ -61,12 +65,24 @@ def has_website_changed(driver, url, no_appointment_text):
     # with open('debugging/page_source.html', 'w', encoding='utf-8') as f:
     #     f.write(driver.page_source)
 
+    wait = WebDriverWait(driver, 15)
+    consular_section_location  = wait.until(
+        EC.presence_of_element_located((By.ID, "appointments_consulate_appointment_facility_id"))
+    )
+    # After logging in, select the appropriate Consular Section Location
+    print(f"Selecting {os.getenv('FACILITY_NAME')})")
+    # consular_section_location = driver.find_element(By.ID, 'appointments_consulate_appointment_facility_id')
+    select = Select(consular_section_location)
+    select.select_by_visible_text(os.getenv('FACILITY_NAME'))
+    time.sleep(5)
+
     # Getting main text
     main_page = driver.find_element(By.ID, 'main')
 
     # For debugging false positives.
-    with open('debugging/main_page', 'w') as f:
+    with open('/tmp/debugging_main_page', 'w') as f:
         f.write(main_page.text)
+    exit(1)
 
     # If the "no appointment" text is not found return True. A change was found.
     return no_appointment_text not in main_page.text
@@ -84,14 +100,27 @@ def run_visa_scraper(url, no_appointment_text):
     # chrome_options.add_argument("--disable-extensions")
     # chrome_options.add_argument("--disable-gpu")
     # chrome_options.add_argument("--no-sandbox") # linux only
-    if os.getenv('HEADLESS') == 'True':
-        chrome_options.add_argument("--headless")  # Comment for visualy debugging
+    if re.search('True', os.getenv('HEADLESS', ''), re.IGNORECASE):
+        #chrome_options.add_argument("--headless")  # Comment for visualy debugging
+        chrome_options.add_argument("--headless=new")  # modern headless mode
+        chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument(
+            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/127.0.0.0 Safari/537.36"
+        )
 
     # Initialize the chromediver (must be installed and in PATH)
     # Needed to implement the headless option
     driver = webdriver.Chrome(options=chrome_options)
 
-    while True:
+    count = 0
+    while count < 1:
+    #while True:
+        count = 1
         current_time = time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime())
         print(f'Starting a new check at {current_time}.')
         if has_website_changed(driver, url, no_appointment_text):

@@ -1,0 +1,3 @@
+selenium==4.*
+python-dotenv
+requests
