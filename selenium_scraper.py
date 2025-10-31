@@ -21,6 +21,7 @@ load_dotenv()
 URL_ID = os.getenv('URL_ID')
 COUNTRY_CODE = os.getenv('COUNTRY_CODE')
 BASE_URL = f'https://ais.usvisa-info.com/en-{COUNTRY_CODE}/niv'
+MINUTES_BETWEEN_CHECKS = 10
 
 WEBSITE_CONTENT = ""
 
@@ -108,6 +109,7 @@ def has_website_changed(driver, url, no_appointment_text):
     if WEBSITE_CONTENT:
         changed = main_page.text != WEBSITE_CONTENT
         WEBSITE_CONTENT = main_page.text
+        send_message(f"I've started monitoring {url} for changes, I'll check every {MINUTES_BETWEEN_CHECKS} minutes")
     else:
         changed = False
     return changed
@@ -144,7 +146,7 @@ def run_visa_scraper(url, driver, no_appointment_text):
     # display = Display(visible=0, size=(800, 600))
     # display.start()
 
-    seconds_between_checks = 10 * 60
+    seconds_between_checks = MINUTES_BETWEEN_CHECKS * 60
 
     while True:
         current_time = time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime())
