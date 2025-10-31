@@ -6,13 +6,15 @@ import time
 
 from dotenv import load_dotenv
 from selenium import webdriver
-from selenium.common.exceptions import ElementNotInteractableException
+from selenium.common.exceptions import ElementNotInteractableException, TimeoutException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from telegram import send_message, send_photo
+
+from urllib3.exceptions import ReadTimeoutError
 
 load_dotenv()
 URL_ID = os.getenv('URL_ID')
@@ -52,13 +54,25 @@ def log_in(driver):
     print('Logged in.')
 
 
+def safe_get(driver, url, retries=3, delay=5):
+    for i in range(retries):
+        try:
+            driver.set_page_load_timeout(30)
+            driver.get(url)
+            return True
+        except (TimeoutException, ReadTimeoutError) as e:
+            print(f"Attempt {i+1} failed: {e}")
+            time.sleep(delay)
+    print("All retries failed.")
+    return False
+
 def has_website_changed(driver, url, no_appointment_text):
     '''Checks for changes in the site. Returns True if a change was found.'''
     global WEBSITE_CONTENT
     # Log in
     while True:
         try:
-            driver.get(url)
+            safe_get(driver, url)
             log_in(driver)
             break
         except ElementNotInteractableException:
