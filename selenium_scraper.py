@@ -108,10 +108,10 @@ def has_website_changed(driver, url, no_appointment_text):
     # If the content of the website has changed, send a message
     if WEBSITE_CONTENT:
         changed = main_page.text != WEBSITE_CONTENT
-        WEBSITE_CONTENT = main_page.text
     else:
         changed = False
         send_message(f"I've started monitoring {url} for changes, I'll check every {MINUTES_BETWEEN_CHECKS} minutes")
+    WEBSITE_CONTENT = main_page.text
     return changed
     # If the "no appointment" text is not found return True. A change was found.
     #return no_appointment_text not in main_page.text
