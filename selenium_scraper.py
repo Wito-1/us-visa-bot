@@ -19,6 +19,8 @@ URL_ID = os.getenv('URL_ID')
 COUNTRY_CODE = os.getenv('COUNTRY_CODE')
 BASE_URL = f'https://ais.usvisa-info.com/en-{COUNTRY_CODE}/niv'
 
+WEBSITE_CONTENT = ""
+
 
 def log_in(driver):
     if driver.current_url != BASE_URL + '/users/sign_in':
@@ -52,6 +54,7 @@ def log_in(driver):
 
 def has_website_changed(driver, url, no_appointment_text):
     '''Checks for changes in the site. Returns True if a change was found.'''
+    global WEBSITE_CONTENT
     # Log in
     while True:
         try:
@@ -82,10 +85,13 @@ def has_website_changed(driver, url, no_appointment_text):
     # For debugging false positives.
     with open('/tmp/debugging_main_page', 'w') as f:
         f.write(main_page.text)
-    exit(1)
 
+    # If the content of the website has changed, send a message
+    changed = main_page.text != WEBSITE_CONTENT
+    WEBSITE_CONTENT = main_page.text
+    return changed
     # If the "no appointment" text is not found return True. A change was found.
-    return no_appointment_text not in main_page.text
+    #return no_appointment_text not in main_page.text
 
 
 def run_visa_scraper(url, no_appointment_text):
@@ -117,32 +123,34 @@ def run_visa_scraper(url, no_appointment_text):
     # Needed to implement the headless option
     driver = webdriver.Chrome(options=chrome_options)
 
-    count = 0
-    while count < 1:
-    #while True:
-        count = 1
+    while True:
         current_time = time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime())
         print(f'Starting a new check at {current_time}.')
         if has_website_changed(driver, url, no_appointment_text):
             print('A change was found. Notifying it.')
-            send_message('A change was found. Here is an screenshot.')
+            send_message(f'A change was found, go to {url} to book!\nHere is an screenshot.')
             send_photo(driver.get_screenshot_as_png())
-
-            # Closing the driver before quicking the script.
-            input('Press enter to quit...')
-            driver.close()
-            exit()
+#            # Closing the driver before quicking the script.
+#            input('Press enter to quit...')
+#            driver.close()
+#            exit()
         else:
-            # print(f'No change was found. Checking again in {seconds_between_checks} seconds.')
-            # time.sleep(seconds_between_checks)
-            for seconds_remaining in range(int(seconds_between_checks), 0, -1):
-                sys.stdout.write('\r')
-                sys.stdout.write(
-                    f'No change was found. Checking again in {seconds_remaining} seconds.'
-                )
-                sys.stdout.flush()
-                time.sleep(1)
-            print('\n')
+            print('No change was found')
+        minutes_remaining = seconds_between_checks // 60
+        print(f'Checking again in {minutes_remaining} minute(s).')
+        sys.stdout.flush()
+        time.sleep(seconds_between_checks)
+#        else:
+#            # print(f'No change was found. Checking again in {seconds_between_checks} seconds.')
+#            # time.sleep(seconds_between_checks)
+#            for seconds_remaining in range(int(seconds_between_checks), 0, -1):
+#                sys.stdout.write('\r')
+#                sys.stdout.write(
+#                    f'No change was found. Checking again in {seconds_remaining} seconds.'
+#                )
+#                sys.stdout.flush()
+#                time.sleep(1)
+#            print('\n')
 
 
 def main():

@@ -25,10 +25,22 @@ py_binary(
     name = "selenium_scraper",
     srcs = [
         "selenium_scraper.py",
+        "telegram.py",
     ],
     data = [".env"],
     deps = [
         requirement("selenium"),
+        requirement("python-dotenv"),
+        requirement("requests"),
+    ],
+)
+
+py_binary(
+    name = "telegram",
+    srcs = [
+        "telegram.py",
+    ],
+    deps = [
         requirement("python-dotenv"),
         requirement("requests"),
     ],

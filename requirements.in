@@ -1,3 +1,5 @@
 selenium==4.*
 python-dotenv
 requests
+aiosmtplib
+boto3
