@@ -63,6 +63,9 @@ def safe_get(driver, url, retries=3, delay=5):
         except (TimeoutException, ReadTimeoutError) as e:
             print(f"Attempt {i+1} failed: {e}")
             time.sleep(delay)
+        except Exception as e:
+            print(f"❌ Unexpected error: {e}")
+            time.sleep(delay)
     print("All retries failed.")
     return False
 
