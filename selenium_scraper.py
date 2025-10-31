@@ -3,10 +3,11 @@ import os
 import re
 import sys
 import time
+import traceback
 
 from dotenv import load_dotenv
 from selenium import webdriver
-from selenium.common.exceptions import ElementNotInteractableException, TimeoutException
+from selenium.common.exceptions import ElementNotInteractableException, TimeoutException, WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select, WebDriverWait
@@ -113,14 +114,7 @@ def has_website_changed(driver, url, no_appointment_text):
     # If the "no appointment" text is not found return True. A change was found.
     #return no_appointment_text not in main_page.text
 
-
-def run_visa_scraper(url, no_appointment_text):
-    # To run Chrome in a virtual display with xvfb (just in Linux)
-    # display = Display(visible=0, size=(800, 600))
-    # display.start()
-
-    seconds_between_checks = 10 * 60
-
+def create_driver():
     # Setting Chrome options to run the scraper headless.
     chrome_options = Options()
     # chrome_options.add_argument("--disable-extensions")
@@ -142,6 +136,15 @@ def run_visa_scraper(url, no_appointment_text):
     # Initialize the chromediver (must be installed and in PATH)
     # Needed to implement the headless option
     driver = webdriver.Chrome(options=chrome_options)
+    return driver
+
+
+def run_visa_scraper(url, driver, no_appointment_text):
+    # To run Chrome in a virtual display with xvfb (just in Linux)
+    # display = Display(visible=0, size=(800, 600))
+    # display.start()
+
+    seconds_between_checks = 10 * 60
 
     while True:
         current_time = time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime())
@@ -150,27 +153,12 @@ def run_visa_scraper(url, no_appointment_text):
             print('A change was found. Notifying it.')
             send_message(f'A change was found, go to {url} to book!\nHere is an screenshot.')
             send_photo(driver.get_screenshot_as_png())
-#            # Closing the driver before quicking the script.
-#            input('Press enter to quit...')
-#            driver.close()
-#            exit()
         else:
             print('No change was found')
         minutes_remaining = seconds_between_checks // 60
         print(f'Checking again in {minutes_remaining} minute(s).')
         sys.stdout.flush()
         time.sleep(seconds_between_checks)
-#        else:
-#            # print(f'No change was found. Checking again in {seconds_between_checks} seconds.')
-#            # time.sleep(seconds_between_checks)
-#            for seconds_remaining in range(int(seconds_between_checks), 0, -1):
-#                sys.stdout.write('\r')
-#                sys.stdout.write(
-#                    f'No change was found. Checking again in {seconds_remaining} seconds.'
-#                )
-#                sys.stdout.flush()
-#                time.sleep(1)
-#            print('\n')
 
 
 def main():
@@ -185,7 +173,26 @@ def main():
     # text = 'FORCING SCREENSHOT'
     # text = 'There are no available appointments at the selected location.'
 
-    run_visa_scraper(url, text)
+    driver = create_driver()
+    try:
+        while True:
+            try:
+                run_visa_scraper(url, driver, text)
+            except (TimeoutException, ReadTimeoutError, WebDriverException) as e:
+                print(f"⚠️ Selenium/Network error: {e}")
+                traceback.print_exc()
+                # optional: restart driver
+                driver.quit()
+                driver = create_driver()
+                time.sleep(5)
+            except Exception as e:
+                print(f"❌ Unexpected error: {e}")
+                traceback.print_exc()
+                driver.quit()
+                driver = create_driver()
+                time.sleep(5)
+    finally:
+        driver.quit()
 
 
 if __name__ == "__main__":
